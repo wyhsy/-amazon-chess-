@@ -1,3 +1,4 @@
+```
 # -amazon-chess-
 亚马逊棋人机博弈课程设计项目 | 肆如破竹小组
 
@@ -11,6 +12,8 @@
 - 版本控制：Git + GitHub
 
 ## 目录结构
+```
+
 -amazon-chess-/
 ├── main.py              # 程序入口
 ├── board.py             # 棋盘数据模型
@@ -21,6 +24,8 @@
 ├── test/                # 单元测试
 └── docs/                # 项目文档
 
+```
+
 ## 环境搭建与运行
 ```bash
 # 安装依赖
@@ -28,3 +33,4 @@ pip install pygame
 
 # 运行游戏
 python main.py
+```
