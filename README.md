@@ -1,4 +1,3 @@
-```
 # -amazon-chess-
 亚马逊棋人机博弈课程设计项目 | 肆如破竹小组
 
@@ -33,4 +32,3 @@ pip install pygame
 
 # 运行游戏
 python main.py
-```
