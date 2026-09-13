@@ -1,176 +1,208 @@
-"""规则引擎：走法生成、合法性校验、终局判定。
-
-规则要点（取自课程题目册《亚马逊棋博弈项目规则简表》）：
-1. 一步棋 = 先移动一个己方亚马逊，再从落点射一支箭；两段都必须走"皇后路线"
-   （8 个方向横竖斜任意距离），路径上不能有棋子或箭头。
-2. 棋子与箭头占的格子不可通过、不可落子；箭头一旦放下永不消失。
-3. 该方一个合法走法都没有 → 该方判负；双方都无路可走 → 和棋。
-4. 全程不能吃掉任何棋子（己方或对方）。
-
-重要：题目册只规定"行棋方法与皇后相同"，**没有马步 / 骑士走法**。
-若老师后来要求加入马步，只需在 DIRECTIONS 之外再补一组骑士偏移，
-其余函数（候选格检查、射箭、终局判定）都不用改。
-
-本模块不允许 import pygame，也不允许 import ui/ai_*，保证能在无图形环境的 CI 里测试。
 """
+rule.py - 亚马逊棋规则引擎
+职责：皇后移动/射箭合法性判断、枚举全部合法完整走法、游戏结束判定、执行/撤销走法
+所有方法为静态方法，第一个参数接收 AmazonsBoard 对象，本身不持有棋盘状态。
 
-from __future__ import annotations
-
-from collections import namedtuple
-
-from board import ARROW, BLACK, EMPTY, WHITE, Board, idx, in_bounds, rc
-
-#: 一步走法：(起点, 落点, 射箭位置)，三个元素都是 (row, col)
-Move = namedtuple("Move", "src dst arrow")
-
-#: 终局结果常量
-WHITE_WIN = 1
-BLACK_WIN = -1
-DRAW = 0
-
-#: 皇后的 8 个行进方向：(行增量, 列增量)
-DIRECTIONS = (
-    (1, 0), (-1, 0), (0, 1), (0, -1),
-    (1, 1), (1, -1), (-1, 1), (-1, -1),
-)
+接口契约：
+  - 所有方法不修改 board，除非显式调用 apply_move / undo_move
+  - apply_move 会同步维护 board.black_pieces / white_pieces 缓存
+  - 走法字典格式：{"from_x","from_y","to_x","to_y","arrow_x","arrow_y"}
+"""
+from board import AmazonsBoard
 
 
-def _iter_pieces(board: Board, color: int):
-    """产出该方每枚棋子的 (row, col)。内部辅助函数。"""
-    for i, v in enumerate(board):
-        if v == color:
-            yield rc(i)
+class AmazonsRule:
+    """亚马逊棋规则引擎：无状态，所有方法接收 board 对象。"""
 
+    # 皇后走法 8 方向向量（棋子移动和箭飞行共用）
+    _DIRECTIONS = [
+        (-1, 0), (1, 0), (0, -1), (0, 1),
+        (-1, -1), (-1, 1), (1, -1), (1, 1)
+    ]
 
-def piece_targets(board: Board, r: int, c: int) -> list:
-    """(r, c) 处棋子的可移动目标格（皇后 8 方向直线，遇到任何占用就停）。"""
-    targets = []
-    for dr, dc in DIRECTIONS:
-        nr, nc = r + dr, c + dc
-        while in_bounds(nr, nc):
-            if board[idx(nr, nc)] != EMPTY:
-                break
-            targets.append((nr, nc))
-            nr += dr
-            nc += dc
-    return targets
+    # ====================== 内部工具 ======================
+    @staticmethod
+    def _is_path_clear(board: AmazonsBoard, sx, sy, ex, ey) -> bool:
+        """
+        检查 (sx,sy) 到 (ex,ey) 的直线路径是否完全通畅（不含起点，含终点前一格）。
+        【修复】补充直线性校验：非横/竖/斜的走法直接返回 False，避免异常坐标导致死循环或越界。
+        """
+        if sx == ex and sy == ey:
+            return False
+        # 必须是直线：同行、同列、或对角线（横纵距离相等）
+        if sx != ex and sy != ey and abs(ex - sx) != abs(ey - sy):
+            return False
+        dx = 1 if ex > sx else (-1 if ex < sx else 0)
+        dy = 1 if ey > sy else (-1 if ey < sy else 0)
+        x, y = sx + dx, sy + dy
+        while x != ex or y != ey:
+            if board.board[y][x] != board.EMPTY:
+                return False
+            x += dx
+            y += dy
+        return True
 
+    @staticmethod
+    def _get_all_targets(board: AmazonsBoard, x, y) -> list:
+        """
+        从 (x,y) 出发，沿 8 方向所有可达空位坐标。
+        同时用于计算棋子移动终点和箭的合法落点。
+        """
+        targets = []
+        for dx, dy in AmazonsRule._DIRECTIONS:
+            nx, ny = x + dx, y + dy
+            while board.is_in_board(nx, ny) and board.board[ny][nx] == board.EMPTY:
+                targets.append((nx, ny))
+                nx += dx
+                ny += dy
+        return targets
 
-def shot_targets(board: Board, r: int, c: int) -> list:
-    """从 (r, c) 射箭的可选落点：规则与棋子移动完全相同。"""
-    return piece_targets(board, r, c)
+    # ====================== 合法性判断 ======================
+    @staticmethod
+    def is_valid_move(board: AmazonsBoard, sx, sy, ex, ey) -> bool:
+        """
+        判断棋子从 (sx,sy) 移动到 (ex,ey) 是否合法。
+        规则：起点是当前玩家棋子 + 终点是空位 + 路径通畅。
+        """
+        if not board.is_in_board(sx, sy) or not board.is_in_board(ex, ey):
+            return False
+        if board.board[sy][sx] != board.current_player:
+            return False
+        if board.board[ey][ex] != board.EMPTY:
+            return False
+        return AmazonsRule._is_path_clear(board, sx, sy, ex, ey)
 
+    @staticmethod
+    def is_valid_arrow(board: AmazonsBoard, x, y, ax, ay) -> bool:
+        """
+        判断从 (x,y) 射箭到 (ax,ay) 是否合法。
+        规则：起点是当前玩家棋子 + 落点是空位 + 不能原地射 + 路径通畅。
+        """
+        if not board.is_in_board(x, y) or not board.is_in_board(ax, ay):
+            return False
+        if board.board[y][x] != board.current_player:
+            return False
+        if board.board[ay][ax] != board.EMPTY:
+            return False
+        if x == ax and y == ay:
+            return False
+        return AmazonsRule._is_path_clear(board, x, y, ax, ay)
 
-def legal_moves(board: Board, color: int) -> list:
-    """生成该方全部合法走法（"移动 + 射箭"的完整组合）。
+    # ====================== 枚举全部合法走法 ======================
+    @staticmethod
+    def generate_all_legal_moves(board: AmazonsBoard) -> list:
+        """
+        生成当前玩家所有合法的完整回合动作（移动 + 射箭）。
+        :return: 走法列表，每项为 {"from_x","from_y","to_x","to_y","arrow_x","arrow_y"}
+        """
+        moves = []
+        player = board.current_player
+        pieces = board.black_pieces if player == board.BLACK else board.white_pieces
 
-    开局量级在数千条。主要给界面和测试用；
-    AI 搜索请改用 piece_targets() + shot_targets() 分步生成，以便边生成边剪枝。
-    """
-    moves = []
-    for src_r, src_c in _iter_pieces(board, color):
-        for dst_r, dst_c in piece_targets(board, src_r, src_c):
-            # 临时构造"移动之后"的棋盘，再用它算可选箭位（一维数组拷贝很便宜）
-            moved = board[:]
-            moved[idx(src_r, src_c)] = EMPTY
-            moved[idx(dst_r, dst_c)] = color
-            for arrow_r, arrow_c in piece_targets(moved, dst_r, dst_c):
-                moves.append(
-                    Move((src_r, src_c), (dst_r, dst_c), (arrow_r, arrow_c))
-                )
-    return moves
+        for (x, y) in pieces:
+            move_targets = AmazonsRule._get_all_targets(board, x, y)
+            for (to_x, to_y) in move_targets:
+                # 临时模拟移动，计算射箭落点
+                board.board[y][x] = board.EMPTY
+                board.board[to_y][to_x] = player
+                arrow_targets = AmazonsRule._get_all_targets(board, to_x, to_y)
+                for (ax, ay) in arrow_targets:
+                    moves.append({
+                        "from_x": x, "from_y": y,
+                        "to_x": to_x, "to_y": to_y,
+                        "arrow_x": ax, "arrow_y": ay
+                    })
+                # 恢复临时状态
+                board.board[to_y][to_x] = board.EMPTY
+                board.board[y][x] = player
 
+        return moves
 
-def is_legal(board: Board, move: Move, color: int) -> bool:
-    """校验一条完整走法在当前局面下是否合法（供界面与测试使用）。"""
-    src, dst, arrow = move
-    src_r, src_c = src
-    if not in_bounds(src_r, src_c) or board[idx(src_r, src_c)] != color:
-        return False
-    if dst not in piece_targets(board, src_r, src_c):
-        return False
+    # ====================== 游戏结束判定 ======================
+    @staticmethod
+    def has_no_legal_moves(board: AmazonsBoard, player: int) -> bool:
+        """
+        判断指定玩家是否无棋可走。
+        只要有一枚棋子能移动，回合就能继续（移动后原位置必为空，箭可射回）。
+        """
+        pieces = board.black_pieces if player == board.BLACK else board.white_pieces
+        for (x, y) in pieces:
+            if len(AmazonsRule._get_all_targets(board, x, y)) > 0:
+                return False
+        return True
 
-    dst_r, dst_c = dst
-    moved = board[:]
-    moved[idx(src_r, src_c)] = EMPTY
-    moved[idx(dst_r, dst_c)] = color
-    return arrow in piece_targets(moved, dst_r, dst_c)
+    @staticmethod
+    def check_game_over(board: AmazonsBoard):
+        """
+        检查游戏是否结束。
+        :return: 未结束返回 None；结束返回 {"winner": 获胜方, "loser": 失败方}
+        """
+        if AmazonsRule.has_no_legal_moves(board, board.current_player):
+            loser = board.current_player
+            winner = board.WHITE if loser == board.BLACK else board.BLACK
+            return {"winner": winner, "loser": loser}
+        return None
 
+    # ====================== 执行与撤销 ======================
+    @staticmethod
+    def apply_move(board: AmazonsBoard, move: dict):
+        """
+        执行一个完整回合动作（移动棋子 + 射箭 + 切换玩家）。
+        执行前自动保存状态，支持 undo。
+        :param move: {"from_x","from_y","to_x","to_y","arrow_x","arrow_y"}
+        :raises ValueError: 走法非法或缓存不一致时抛出，拒绝执行且不污染状态
+        """
+        from_pos = (move["from_x"], move["from_y"])
+        cache = board.black_pieces if board.current_player == board.BLACK else board.white_pieces
 
-def apply_move(board: Board, move: Move, color: int) -> Board:
-    """返回走完这一步之后的新棋盘，**不修改入参 board**。"""
-    src, dst, arrow = move
-    new_board = board[:]
-    new_board[idx(*src)] = EMPTY
-    new_board[idx(*dst)] = color
-    new_board[idx(*arrow)] = ARROW
-    return new_board
+        # 前置校验 1：缓存与棋盘一致
+        if from_pos not in cache:
+            raise ValueError(f"棋子缓存与棋盘状态不一致：{from_pos} 不在缓存中")
 
+        # 前置校验 2：移动合法
+        if not AmazonsRule.is_valid_move(board, move["from_x"], move["from_y"],
+                                         move["to_x"], move["to_y"]):
+            raise ValueError(f"非法移动：({move['from_x']},{move['from_y']}) → "
+                             f"({move['to_x']},{move['to_y']})")
 
-def do_move(board: Board, move: Move, color: int) -> tuple:
-    """就地执行走法（AI 搜索用），返回 (起点旧值, 落点旧值)，配合 undo_move 复原。"""
-    src, dst, arrow = move
-    src_i, dst_i = idx(*src), idx(*dst)
-    old = (board[src_i], board[dst_i])
-    board[src_i] = EMPTY
-    board[dst_i] = color
-    board[idx(*arrow)] = ARROW
-    return old
+        # 前置校验 3：射箭合法（临时模拟移动后校验）
+        board.board[move["from_y"]][move["from_x"]] = board.EMPTY
+        board.board[move["to_y"]][move["to_x"]] = board.current_player
+        valid_arrow = AmazonsRule.is_valid_arrow(board, move["to_x"], move["to_y"],
+                                                 move["arrow_x"], move["arrow_y"])
+        board.board[move["to_y"]][move["to_x"]] = board.EMPTY
+        board.board[move["from_y"]][move["from_x"]] = board.current_player
 
+        if not valid_arrow:
+            raise ValueError(f"非法射箭：({move['to_x']},{move['to_y']}) 射向 "
+                             f"({move['arrow_x']},{move['arrow_y']})")
 
-def undo_move(board: Board, move: Move, color: int, old: tuple) -> None:
-    """与 do_move 配对，把棋盘完全恢复成调用之前的样子。
+        # ===== 正式执行 =====
+        board.save_state()
 
-    color 在这里用不到，保留它只是为了和 do_move 的签名对称、将来便于加校验。
-    """
-    src, dst, arrow = move
-    board[idx(*arrow)] = EMPTY
-    board[idx(*dst)] = old[1]
-    board[idx(*src)] = old[0]
+        # 1. 移动棋子
+        board.board[move["from_y"]][move["from_x"]] = board.EMPTY
+        board.board[move["to_y"]][move["to_x"]] = board.current_player
 
+        # 2. 同步棋子位置缓存
+        if board.current_player == board.BLACK:
+            board.black_pieces.remove(from_pos)
+            board.black_pieces.append((move["to_x"], move["to_y"]))
+        else:
+            board.white_pieces.remove(from_pos)
+            board.white_pieces.append((move["to_x"], move["to_y"]))
 
-def has_any_move(board: Board, color: int) -> bool:
-    """该方是否还有棋可走（终局判定专用，比 legal_moves 快得多）。
+        # 3. 放置障碍
+        board.board[move["arrow_y"]][move["arrow_x"]] = board.OBSTACLE
 
-    为什么只检查"棋子能不能移动"就够了（不用再看能不能射箭）：
-    如果某枚棋子能从 A 走到 B，说明 A→B 路径上的格子本来是空的，而且 A 移开后也空，
-    那么"把箭射回 A"一定合法。所以
-        「存在可移动的棋子」⟺「存在合法的完整走法」。
-    """
-    for r, c in _iter_pieces(board, color):
-        if piece_targets(board, r, c):
-            return True
-    return False
+        # 4. 切换玩家
+        board.current_player = board.WHITE if board.current_player == board.BLACK else board.BLACK
 
+    @staticmethod
+    def undo_move(board: AmazonsBoard) -> bool:
+        """
+        撤销上一步走法，恢复棋盘状态和当前玩家。
+        :return: 撤销成功返回 True；历史栈为空返回 False
+        """
+        return board.restore_state()
 
-def territory(board: Board) -> tuple:
-    """返回 (黑方领地, 白方领地)：每枚棋子 8 个方向上紧邻的空格各记 1 分。
-
-    说明：
-    - 同一个空格可能被两枚棋子同时计入，这是亚马逊棋常见的领地计法；
-    - 本函数只提供数据（给估值函数当特征、给界面显示用），
-      **不用于判定胜负** —— 题目册只规定"无路可走判负 / 双方无路为和棋"。
-    """
-    counts = {BLACK: 0, WHITE: 0}
-    for i, v in enumerate(board):
-        if v != BLACK and v != WHITE:
-            continue
-        r, c = rc(i)
-        for dr, dc in DIRECTIONS:
-            nr, nc = r + dr, c + dc
-            if in_bounds(nr, nc) and board[idx(nr, nc)] == EMPTY:
-                counts[v] += 1
-    return counts[BLACK], counts[WHITE]
-
-
-def game_result(board: Board) -> int | None:
-    """判定局面结果：None = 未结束；DRAW = 双方都无路可走；WHITE_WIN / BLACK_WIN。"""
-    white_can = has_any_move(board, WHITE)
-    black_can = has_any_move(board, BLACK)
-    if not white_can and not black_can:
-        return DRAW
-    if not white_can:
-        return BLACK_WIN
-    if not black_can:
-        return WHITE_WIN
-    return None
