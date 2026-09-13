@@ -76,7 +76,9 @@ pytest -q
 | AI 算法 | @wyhsy | `ai_search.py`、`test/test_search.py` | Minimax 框架、Alpha-Beta 剪枝、迭代加深/时限控制、性能优化 |
 | 评估策略 | @qiqiyuexi | `ai_eval.py`、`test/test_eval.py`、`docs/` | 估值函数设计、权重调优、实验对比、报告与答辩材料 |
 
-（详细职责边界与依赖关系见 `docs/plan.md`；模块归属的强制约束见 `.github/CODEOWNERS`）
+（详细职责边界与依赖关系见 `docs/plan.md`；模块归属记录在 `.github/CODEOWNERS`）
+
+> **本项目的 GitHub 操作由组长 @wyhsy 统一负责**（定接口、派任务、审阅合并 PR、发布 main）；队友只需完成自己模块的文件并提 PR。
 
 ## 玩法与规则要点
 
@@ -100,8 +102,9 @@ pytest -q
 
 ## 开发进度
 
-- [x] 仓库创建、协作规范（README / CONTRIBUTING）
-- [ ] **M1 规则地基**：`board.py` + `rule.py` + 单元测试全绿 + 接口契约冻结
+- [x] 仓库创建、协作规范（README / CONTRIBUTING / CI / 分支保护）
+- [x] 接口契约冻结（`docs/interface.md` v1.0，2026-09-13）
+- [ ] **M1 规则地基**：`board.py` + `rule.py` + 单元测试全绿
 - [ ] **M2 可玩**：`ui.py` 人人对战可下完完整一局
 - [ ] **M3 AI 接入**：Minimax + Alpha-Beta 人机对战
 - [ ] **M4 打磨**：估值调优、难度分级、性能优化、报告与答辩材料
@@ -116,6 +119,7 @@ pytest -q
 | `docs/plan.md` | 分工、里程碑、每周节奏、风险清单 |
 | `docs/interface.md` | 接口契约：棋盘表示、Move 结构、模块函数签名 |
 | `docs/setup.md` | 环境搭建、常用 Git 操作步骤 |
+| `docs/tasks/` | **任务派发书**（每个模块交什么、怎么验收，队友看这里） |
 
 ## 环境要求
 
