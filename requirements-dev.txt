@@ -1,0 +1,5 @@
+# 开发/测试依赖（CI 与本地开发都装这个）
+-r requirements.txt
+
+pytest>=8.0
+pytest-cov>=5.0
