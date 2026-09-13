@@ -1,8 +1,8 @@
 name: CI
 
 on:
+  # 所有分支的 push 都跑，避免 docs/* 、chore/* 这类分支“push 了却等不到检查”
   push:
-    branches: [main, dev, "feature/**"]
   pull_request:
     branches: [main, dev]
 
@@ -32,13 +32,14 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: 运行单元测试
+        # 注意用 `python -m pytest` 而不是裸 `pytest`：
+        # 前者会把仓库根加入 sys.path，test/ 里才能 import board / rule
+        # （配合 pytest.ini 里的 pythonpath = . 双保险）
         # dummy 驱动让 pygame 能在无显示器的 CI 里被导入
-        # 注：test/test_smoke.py 保证仓库刚建立、还没有业务用例时 CI 也是绿的；
-        #     M1 完成后可删除该文件，此步骤行为不变。
         env:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
-        run: pytest -q
+        run: python -m pytest -q
 
       - name: 代码风格检查（不阻塞合并）
         continue-on-error: true
