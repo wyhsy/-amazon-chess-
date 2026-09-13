@@ -36,10 +36,13 @@ Board = list[int]          # 长度 100，board[r * BOARD_SIZE + c]
 
 def idx(r: int, c: int) -> int                  # (r, c) -> 一维下标
 def rc(i: int) -> tuple[int, int]               # 一维下标 -> (r, c)
-def at(board: Board, r: int, c: int) -> int     # 越界返回 None 还是报错？统一：返回 -1 表示越界
+def in_bounds(r: int, c: int) -> bool           # 坐标是否在棋盘内
+def at(board: Board, r: int, c: int) -> int     # 取格子内容；越界返回 -1
 def clone(board: Board) -> Board                # 浅拷贝一维 list，O(100)
 def initial_board() -> Board                    # 标准开局
-def in_bounds(r: int, c: int) -> bool
+def empty_board() -> Board                      # 全空棋盘（测试与工具用）
+def count(board: Board, value: int) -> int      # 统计某类格子数量
+def to_text(board: Board) -> str                # 渲染成字符画（调试/演示用）
 ```
 
 **标准开局布局**（`(row, col)`，0 起）：
@@ -61,10 +64,10 @@ BLACK_WIN = -1
 DRAW = 0
 
 def piece_targets(board: Board, r: int, c: int) -> list[tuple[int, int]]:
-    """单个棋子的可移动目标格（皇后走法 + 马步），不包含射箭。"""
+    """单个棋子的可移动目标格（皇后 8 方向直线），不包含射箭。"""
 
 def shot_targets(board: Board, r: int, c: int) -> list[tuple[int, int]]:
-    """从 (r, c) 射箭的可选落点（皇后走法 + 马步）。"""
+    """从 (r, c) 射箭的可选落点（规则与移动完全相同：皇后 8 方向直线）。"""
 
 def legal_moves(board: Board, color: int) -> list[Move]:
     """生成该方全部合法完整走法（移动 + 射箭）。开局量级为数千条，注意性能。"""
@@ -85,7 +88,7 @@ def has_any_move(board: Board, color: int) -> bool:
     """该方是否还有棋可走（用于终局判定，应比 legal_moves 早退更高效）。"""
 
 def territory(board: Board) -> tuple[int, int]:
-    """(黑方可达格数, 白方可达格数)，用于终局计分与估值特征。"""
+    """(黑方领地, 白方领地)：每枚棋子 8 方向紧邻空格各记 1 分；只作估值特征与界面显示用，不判定胜负。"""
 
 def game_result(board: Board) -> int | None:
     """None=未结束；DRAW=和棋；WHITE_WIN / BLACK_WIN=已分胜负。"""
@@ -93,11 +96,11 @@ def game_result(board: Board) -> int | None:
 
 **规则要点（实现时必须逐条写测试）**：
 
-1. 一回合 = **先移动己方亚马逊，再从落点射箭**，两段都必须走皇后路线或马步，路径上不能有障碍（棋子或箭头）。
+1. 一回合 = **先移动己方亚马逊，再从落点射箭**，两段都走皇后路线（8 方向直线；题目册未规定马步，因此不实现），路径上不能有障碍（棋子或箭头）。
 2. 射箭落点从落点出发计算，**箭不能射到自己所在格**。
 3. 棋子和箭头占据的格子：不可通过、不可落子。
 4. 该方 `has_any_move` 为 `False` 时该方判负；双方都无法走子为和棋。
-5. 终局（或需要判断胜负时）用 `territory()` 比较领地——具体口径以题目册为准，写入测试固定。
+5. 胜负只按第 4 条判定；`territory()` 仅供 AI 估值与界面显示，**不用于判定胜负**（题目册没有这条规则）。
 
 ## 4. 估值函数（`ai_eval.py`）
 
