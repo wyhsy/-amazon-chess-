@@ -40,6 +40,9 @@ Thumbs.db
 desktop.ini
 .DS_Store
 
+# ===== Reasonix 会话附件（截图等，不要提交）=====
+.reasonix/
+
 # ===== 本地临时产物（不要提交）=====
 logs/
 *.log
