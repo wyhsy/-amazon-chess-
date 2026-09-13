@@ -1,90 +1,109 @@
-"""棋盘数据模型（接口契约见 docs/interface.md 第 2 节）。
-
-棋盘用一维 `list[int]` 表示，长度 100，索引 = row * 10 + col。
-约定：row = 0 是最上面一行，col = 0 是最左列。
-（与课程题目册的图示一致；若图示不同，以图示为准并同步更新测试。）
-
-这个模块**只依赖标准库**，不允许 import 项目里其它模块，也不允许 import pygame。
 """
+board.py - 亚马逊棋棋盘数据模型
+职责：棋盘表示、初始化、状态保存/恢复、坐标工具、棋子位置缓存
+本模块只负责数据存储，不包含任何规则判定逻辑。
+规则判定请使用 rule.py 中的 AmazonsRule。
 
-from __future__ import annotations
-
-BOARD_SIZE = 10
-CELL_COUNT = BOARD_SIZE * BOARD_SIZE  # 100
-
-# 格子取值：全项目只用这 4 个常量，禁止裸写 0/1/2/3
-EMPTY = 0
-BLACK = 1
-WHITE = 2
-ARROW = 3
-
-# 一维棋盘的别名（长度 100）：board[r * BOARD_SIZE + c]
-Board = list[int]
-
-# 标准开局：黑 4 枚、白 4 枚（对称分布，测试里固定住）
-BLACK_START = ((0, 3), (3, 0), (6, 9), (9, 6))
-WHITE_START = ((0, 6), (3, 9), (6, 0), (9, 3))
+对外接口（供 rule.py / ai_search.py / ui.py 调用）：
+  - board.board          : 10x10 二维数组，值为 EMPTY/BLACK/WHITE/OBSTACLE
+  - board.current_player : 当前执子方（BLACK 或 WHITE）
+  - board.black_pieces   : 黑方棋子坐标列表 [(x,y), ...]
+  - board.white_pieces   : 白方棋子坐标列表 [(x,y), ...]
+  - board.history        : 历史状态栈（供 undo）
+  - board.init_standard() / clone() / save_state() / restore_state()
+  - board.is_in_board(x, y) / get_piece_positions(player)
+"""
+from copy import deepcopy
 
 
-def idx(r: int, c: int) -> int:
-    """(row, col) -> 一维下标。"""
-    return r * BOARD_SIZE + c
+class AmazonsBoard:
+    """棋盘数据模型：仅维护状态，不做规则判定。"""
 
+    # ===== 棋盘状态常量 =====
+    EMPTY = 0       # 空位
+    BLACK = 1       # 黑方棋子
+    WHITE = 2       # 白方棋子
+    OBSTACLE = 3    # 永久障碍
+    BOARD_SIZE = 10 # 标准棋盘 10x10
 
-def rc(i: int) -> tuple:
-    """一维下标 -> (row, col)。"""
-    return divmod(i, BOARD_SIZE)
+    def __init__(self):
+        """创建空棋盘框架（未摆棋子），调用 init_standard() 后才可使用。"""
+        self.board = []
+        self.current_player = self.BLACK  # 黑方先手
+        self.history = []                 # 历史状态栈
+        self.black_pieces = []            # 黑方棋子位置缓存
+        self.white_pieces = []            # 白方棋子位置缓存
 
+    # ====================== 初始化与拷贝 ======================
+    def init_standard(self):
+        """初始化标准 10x10 开局：双方各 4 枚棋子，黑方下方先行。"""
+        self.board = [[self.EMPTY for _ in range(self.BOARD_SIZE)]
+                      for _ in range(self.BOARD_SIZE)]
 
-def in_bounds(r: int, c: int) -> bool:
-    """坐标是否在棋盘内。"""
-    return 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE
+        # 白方（上方）
+        self.board[0][3] = self.WHITE
+        self.board[0][6] = self.WHITE
+        self.board[3][0] = self.WHITE
+        self.board[3][9] = self.WHITE
 
+        # 黑方（下方）
+        self.board[6][0] = self.BLACK
+        self.board[6][9] = self.BLACK
+        self.board[9][3] = self.BLACK
+        self.board[9][6] = self.BLACK
 
-def at(board: Board, r: int, c: int) -> int:
-    """取某格内容；越界返回 -1。"""
-    if not in_bounds(r, c):
-        return -1
-    return board[idx(r, c)]
+        # 棋子位置缓存（坐标为 (x, y)）
+        self.black_pieces = [(0, 6), (9, 6), (3, 9), (6, 9)]
+        self.white_pieces = [(3, 0), (6, 0), (0, 3), (9, 3)]
 
+        self.current_player = self.BLACK
+        self.history.clear()
 
-def clone(board: Board) -> Board:
-    """拷贝棋盘。
+    def clone(self):
+        """深拷贝当前棋盘，返回完全独立的新实例（用于 AI 前瞻搜索）。"""
+        new_board = AmazonsBoard()
+        new_board.board = deepcopy(self.board)
+        new_board.current_player = self.current_player
+        new_board.black_pieces = self.black_pieces.copy()
+        new_board.white_pieces = self.white_pieces.copy()
+        # 不复制 history：新实例用于独立搜索分支
+        return new_board
 
-    一维 list 的浅拷贝是 O(100)，比 copy.deepcopy 快得多——
-    AI 搜索每层都要复制棋盘，这里必须是这个写法。
-    """
-    return board[:]
+    # ====================== 状态保存与恢复 ======================
+    def save_state(self):
+        """保存当前完整状态到历史栈（apply_move 前自动调用）。"""
+        self.history.append({
+            "board": deepcopy(self.board),
+            "current_player": self.current_player,
+            "black_pieces": self.black_pieces.copy(),
+            "white_pieces": self.white_pieces.copy()
+        })
 
+    def restore_state(self):
+        """
+        从历史栈弹出并恢复上一步状态。
+        :return: 恢复成功返回 True；历史栈为空返回 False（不崩溃）
+        """
+        if not self.history:
+            return False
+        last_state = self.history.pop()
+        self.board = last_state["board"]
+        self.current_player = last_state["current_player"]
+        self.black_pieces = last_state["black_pieces"].copy()
+        self.white_pieces = last_state["white_pieces"].copy()
+        return True
 
-def initial_board() -> Board:
-    """返回标准开局棋盘。"""
-    board = [EMPTY] * CELL_COUNT
-    for r, c in BLACK_START:
-        board[idx(r, c)] = BLACK
-    for r, c in WHITE_START:
-        board[idx(r, c)] = WHITE
-    return board
+    # ====================== 坐标工具 ======================
+    def is_in_board(self, x: int, y: int) -> bool:
+        """检查 (x, y) 是否在棋盘有效范围内。"""
+        return 0 <= x < self.BOARD_SIZE and 0 <= y < self.BOARD_SIZE
 
-
-def empty_board() -> Board:
-    """返回全空棋盘（测试与工具脚本用）。"""
-    return [EMPTY] * CELL_COUNT
-
-
-def count(board: Board, value: int) -> int:
-    """统计某种格子的数量（测试里断言"棋子不会被吃掉"用）。"""
-    return board.count(value)
-
-
-def to_text(board: Board) -> str:
-    """把棋盘渲染成等宽字符画，方便在控制台或测试里肉眼检查。
-
-    `.` = 空、`B` = 黑、`W` = 白、`x` = 箭头（障碍）。
-    """
-    symbols = {EMPTY: ".", BLACK: "B", WHITE: "W", ARROW: "x"}
-    lines = ["    " + " ".join(str(c) for c in range(BOARD_SIZE))]
-    for r in range(BOARD_SIZE):
-        row = " ".join(symbols.get(board[idx(r, c)], "?") for c in range(BOARD_SIZE))
-        lines.append(f"{r:2d}  {row}")
-    return "\n".join(lines)
+    def get_piece_positions(self, player: int) -> list:
+        """
+        获取指定玩家的所有棋子坐标（返回副本，外部修改不影响内部）。
+        :param player: BLACK / WHITE
+        :return: [(x1,y1), (x2,y2), ...]
+        """
+        if player == self.BLACK:
+            return self.black_pieces.copy()
+        return self.white_pieces.copy()
