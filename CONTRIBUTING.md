@@ -14,9 +14,16 @@
 | AI 算法 | @wyhsy | `ai_search.py`、`test/test_search.py`、`main.py` | Minimax、Alpha-Beta 剪枝、迭代加深、置换表 |
 | 评估策略 | @qiqiyuexi | `ai_eval.py`、`test/test_eval.py`、`docs/` | 局面估值函数、权重调优、报告与答辩材料 |
 
-> `CODEOWNERS` 已填入以上真实用户名；在仓库 Rulesets 中勾选 `Require review from Code Owners` 后，
-> 修改某模块的 PR 就会强制要求对应负责人批准（`@qiqiyuexi` 需先接受仓库邀请）。
-> **只改自己模块的文件**，接口调整必须先走第 6 节的红线②流程。
+> `CODEOWNERS` 里记录了每个模块的负责人（`@wyhsy`=AI 算法、`@guoyi1005`=界面、`@xiong681`=规则、`@qiqiyuexi`=评估），作用是**标明文件归属**，不是要求谁来批准。
+>
+> **本项目的 GitHub 操作由组长（@wyhsy）统一负责**：
+>
+> | 角色 | 负责的事 |
+> | --- | --- |
+> | 组长 @wyhsy | 定接口与里程碑（见 `docs/interface.md`）、派发任务、审阅并合并所有 PR、`main` 发布、维护 `.github/` 与 CI |
+> | 队友 @guoyi1005 / @xiong681 / @qiqiyuexi | 按派发任务实现自己模块的文件 → 本地跑通 `pytest -q` → 开 feature 分支提 PR（**不需要 Approve 任何 PR，也不需要碰仓库设置**） |
+>
+> **只改自己模块的文件**；需要改接口或动别人文件，先在群里说明，由组长拍板。
 
 ## 1. 前置准备
 
@@ -57,8 +64,9 @@ pip install -r requirements-dev.txt
 ### 1.3 必须知道的仓库设置
 
 - 仓库默认分支是 `main`，但**日常开发都在 `dev` 上进行**，不要基于 main 开工。
-- `main` / `dev` 已开启分支保护：**不允许直接 push，必须通过 PR**。local 端被拒绝是正常现象，不是你的账号有问题。
+- `main` / `dev` 已开启分支保护：**不允许直接 push，必须通过 PR**。本地被拒绝是正常现象，不是你的账号有问题。
 - CI（`.github/workflows/ci.yml`）会在 PR 上自动跑 `pytest`，**CI 未通过不能合并**。
+- PR **不需要任何人批准**，但必须等 CI 变绿；**合并由组长执行**，你只要把 PR 提出来、在群里说一声即可。
 
 ## 2. 分支管理规范
 
@@ -123,18 +131,17 @@ git push origin feature/模块名
 2. 源分支 = 你的功能分支，目标分支 = **`dev`**（不要选 main）
 3. 按 `.github/pull_request_template.md` 模板填写：改了什么、怎么测的、是否影响接口
 4. 关联对应 Issue（PR 描述里写 `Closes #12`）
-5. 等待 CI 变绿 + 审核通过
+5. 等待 CI 变绿（4 个 `pytest` 全 ✅），然后在群里 @ 组长来合并
 
-### 步骤 6：合并与清理
+### 步骤 6：合并与清理（合并由组长做）
 
-- 合并方式统一用 **Squash and merge**（一个功能 = 一条 dev 提交记录，历史干净）
-- 合并后在本地清理：
+- 组长用 **Squash and merge** 合并（一个功能 = 一条 dev 提交记录，历史干净），并删掉远程功能分支
+- 你在本地清理：
 
 ```bash
 git checkout dev
 git pull origin dev
 git branch -d feature/模块名
-git push origin --delete feature/模块名   # 若远程分支还在
 ```
 
 ### 步骤 7：里程碑发布（只有组长执行）
@@ -194,14 +201,14 @@ git push --force-with-lease origin feature/模块名
 
 > 绝对不要对 `main` / `dev` 使用 `--force` 或 `--force-with-lease`。
 
-冲突解决原则：**谁的模块谁拍板**。若冲突出现在别人负责的文件里，不要自行决定实现方式，先在群里 @ 对方确认。接口相关的冲突找规则负责人（`board.py` / `rule.py` 是地基）。
+冲突解决原则：**自己模块内的事自己定，跨模块的事找组长裁定**。若冲突出现在别人负责的文件里，不要自行决定实现方式，先在群里说明，由组长决定怎么合。接口相关的冲突由组长处理（`docs/interface.md` 是唯一口径）。
 
 ## 6. 协作红线（必须遵守）
 
 1. **禁止直接向 `main` / `dev` 推送代码**，所有改动必须通过 PR 合并
    （已由 GitHub 分支保护强制，不是靠自觉）
 2. **只修改自己负责模块的文件**。确实需要改动他人文件时，必须先开 Issue 说明、@ 对方在本 PR 中确认；接口类改动还需同步更新 `docs/interface.md`
-3. **接口变动必须“先通知、后修改”**：`board.py` / `rule.py` 的公开函数签名是全队契约，改动前先在群里发通知，并检查 `ui.py`、`ai_search.py`、`ai_eval.py` 的调用点
+3. **接口由组长统一维护**：`board.py` / `rule.py` 的公开函数签名以 `docs/interface.md` **v1.0** 为准；确需改动时先在群里说明，由组长确认并同步所有调用点，不要自行改签名
 4. 一个功能分支只做一件事，不混合无关改动
 5. 提交信息遵循第 4 节规范，禁止模糊描述
 6. 提交前必须 `pytest -q` 通过；冲突必须在本地解决完成后再提 PR
@@ -235,6 +242,7 @@ git push --force-with-lease origin feature/模块名
 | `docs/plan.md` | 分工、里程碑、协作节奏、风险清单 |
 | `docs/interface.md` | **接口契约**（棋盘表示、Move 结构、各模块函数签名） |
 | `docs/setup.md` | 环境搭建、常见 Git 操作图文步骤 |
+| `docs/tasks/` | **任务派发与模块任务书（队友从这里领活）** |
 | `docs/meeting/` | 会议记录 |
 | `README.md` | 项目简介、快速开始、进度 |
 
@@ -247,5 +255,5 @@ git checkout -b feature/xxx                  # 2. 开分支
 pytest -q && python main.py                  # 3. 自测
 git add . && git commit -m "feat(rule): xxx" # 4. 提交
 git push origin feature/xxx                  # 5. 推送
-# 6. 网页上向 dev 提 PR，等 CI 绿 + 审核
+# 6. 网页上向 dev 提 PR，等 CI 绿，再 @ 组长合并
 ```
