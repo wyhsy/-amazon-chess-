@@ -1,6 +1,6 @@
 # 项目计划（分工 · 里程碑 · 节奏 · 风险）
 
-> 适用对象：肆如破竹小组全体 4 人。最后更新：待填。
+> 适用对象：肆如破竹小组全体 4 人。最后更新：2026-09-13。
 
 ## 1. 分工与职责边界
 
@@ -8,10 +8,10 @@
 
 | 模块 | 负责人 | 拥有的文件 | 交付物 |
 | --- | --- | --- | --- |
-| ① 界面设计 | @ui-owner | `ui.py`、`assets/` | 棋盘与棋子渲染、选中/落子交互、非法走法提示、胜负提示与动画、AI 思考等待状态 |
-| ② 游戏规则 | @rule-owner | `board.py`、`rule.py`、`test/test_rule.py` | 棋盘模型、走法生成、终局与计分、契约测试（**全队地基**） |
-| ③ AI 算法 | @ai-owner | `ai_search.py`、`test/test_search.py`、`main.py` | Minimax + Alpha-Beta、时限控制、难度分级、性能优化 |
-| ④ 评估策略 | @eval-owner | `ai_eval.py`、`test/test_eval.py`、`docs/` | 估值函数与权重调优、实验对比数据、报告与答辩材料 |
+| ① 界面设计 | @guoyi1005 | `ui.py`、`assets/` | 棋盘与棋子渲染、选中/落子交互、非法走法提示、胜负提示与动画、AI 思考等待状态 |
+| ② 游戏规则 | @xiong681 | `board.py`、`rule.py`、`test/test_rule.py` | 棋盘模型、走法生成、终局与计分、契约测试（**全队地基**） |
+| ③ AI 算法 | @wyhsy | `ai_search.py`、`test/test_search.py`、`main.py` | Minimax + Alpha-Beta、时限控制、难度分级、性能优化 |
+| ④ 评估策略 | @qiqiyuexi | `ai_eval.py`、`test/test_eval.py`、`docs/` | 估值函数与权重调优、实验对比数据、报告与答辩材料 |
 
 ### 关键路径与依赖
 
