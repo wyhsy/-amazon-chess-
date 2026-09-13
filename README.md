@@ -71,12 +71,12 @@ pytest -q
 
 | 角色 | 负责人 | 负责文件 | 主要工作 |
 | --- | --- | --- | --- |
-| 界面设计 | @ui-owner | `ui.py`、`assets/` | 棋盘与棋子渲染、选中/落子交互、走法提示、胜负提示与动画 |
-| 游戏规则 | @rule-owner | `board.py`、`rule.py`、`test/test_rule.py` | 棋盘数据模型、8 方向走法生成、炮台遮挡判定、终局与计分 |
-| AI 算法 | @ai-owner | `ai_search.py`、`test/test_search.py` | Minimax 框架、Alpha-Beta 剪枝、迭代加深/时限控制、性能优化 |
-| 评估策略 | @eval-owner | `ai_eval.py`、`test/test_eval.py`、`docs/` | 估值函数设计、权重调优、实验对比、报告与答辩材料 |
+| 界面设计 | @guoyi1005 | `ui.py`、`assets/` | 棋盘与棋子渲染、选中/落子交互、走法提示、胜负提示与动画 |
+| 游戏规则 | @xiong681 | `board.py`、`rule.py`、`test/test_rule.py` | 棋盘数据模型、8 方向走法生成、炮台遮挡判定、终局与计分 |
+| AI 算法 | @wyhsy | `ai_search.py`、`test/test_search.py` | Minimax 框架、Alpha-Beta 剪枝、迭代加深/时限控制、性能优化 |
+| 评估策略 | @qiqiyuexi | `ai_eval.py`、`test/test_eval.py`、`docs/` | 估值函数设计、权重调优、实验对比、报告与答辩材料 |
 
-（把 @ 占位替换成真实 GitHub 用户名；详细职责边界与依赖关系见 `docs/plan.md`）
+（详细职责边界与依赖关系见 `docs/plan.md`；模块归属的强制约束见 `.github/CODEOWNERS`）
 
 ## 玩法与规则要点
 

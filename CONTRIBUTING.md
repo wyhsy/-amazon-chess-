@@ -9,12 +9,13 @@
 
 | 模块 | 负责人 | 主要文件 | 说明 |
 | --- | --- | --- | --- |
-| 界面设计 | @ui-owner | `ui.py`、`assets/` | Pygame 渲染、交互、动画、提示 |
-| 游戏规则 | @rule-owner | `board.py`、`rule.py`、`test/test_rule.py` | 棋盘数据模型、走法生成、胜负判定（**地基模块**） |
-| AI 算法 | @ai-owner | `ai_search.py`、`test/test_search.py` | Minimax、Alpha-Beta 剪枝、迭代加深、置换表 |
-| 评估策略 | @eval-owner | `ai_eval.py`、`test/test_eval.py`、`docs/` | 局面估值函数、权重调优、报告与答辩材料 |
+| 界面设计 | @guoyi1005 | `ui.py`、`assets/` | Pygame 渲染、交互、动画、提示 |
+| 游戏规则 | @xiong681 | `board.py`、`rule.py`、`test/test_rule.py` | 棋盘数据模型、走法生成、胜负判定（**地基模块**） |
+| AI 算法 | @wyhsy | `ai_search.py`、`test/test_search.py`、`main.py` | Minimax、Alpha-Beta 剪枝、迭代加深、置换表 |
+| 评估策略 | @qiqiyuexi | `ai_eval.py`、`test/test_eval.py`、`docs/` | 局面估值函数、权重调优、报告与答辩材料 |
 
-> 姓名与 GitHub 用户名填入后，同步更新 `CODEOWNERS`（见 `.github/CODEOWNERS` 内说明）。
+> `CODEOWNERS` 已填入以上真实用户名；在仓库 Rulesets 中勾选 `Require review from Code Owners` 后，
+> 修改某模块的 PR 就会强制要求对应负责人批准（`@qiqiyuexi` 需先接受仓库邀请）。
 > **只改自己模块的文件**，接口调整必须先走第 6 节的红线②流程。
 
 ## 1. 前置准备

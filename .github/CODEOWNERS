@@ -3,38 +3,49 @@
 # 作用：开启分支保护的 “Require review from Code Owners” 后，
 #       修改某模块的 PR 必须得到该模块负责人批准（把“红线②只改自己的文件”变成机制约束）。
 #
-# ⚠️ 使用前必须做两件事：
-#   1. 把下面前缀为 @ 的用户名替换成组员真实的 GitHub 用户名
-#      （写了不存在的用户名会让 GitHub 报 CODEOWNERS 语法错误）
-#   2. 仓库 Settings → Branches/Rulesets 中为 main、dev 开启：
-#      要求 PR、要求 1 个 approval、勾选 Require review from Code Owners
+# 当前状态：已填入 4 位队员的真实 GitHub 用户名（2026-09-13）：
+#   @wyhsy      = 组长 / AI 算法（ai_search.py、main.py）
+#   @guoyi1005  = 界面设计（ui.py、assets/）
+#   @xiong681   = 游戏规则（board.py、rule.py，地基模块）
+#   @qiqiyuexi  = 评估策略（ai_eval.py、docs/ 与报告）
 #
-# 语法：<路径模式>  @用户名1 @用户名2
+# 启用步骤：仓库 Settings → Rules → Rulesets → 编辑保护 dev/main 的规则
+#           → 勾选 “Require review from Code Owners”。
+# ⚠️ @qiqiyuexi 的仓库邀请需先被接受，否则该用户的 code owner review 无法生效。
+#
+# 语法：<路径模式>  @用户名1 @用户名2（后出现的规则会覆盖先出现的规则）
 
-# 兜底：仓库负责人（@wyhsy 是已确认存在的账号）
+# 兜底：未被下面任何规则覆盖的文件由组长把关
 *                       @wyhsy
 
-# ---- 以下为模块归属模板：替换用户名后取消注释即可生效 ----
-#
-# # 游戏规则（地基模块，改动影响面最大）
-# /board.py             @rule-owner
-# /rule.py              @rule-owner
-# /test/test_rule.py    @rule-owner
-#
-# # 界面设计
-# /ui.py                @ui-owner
-# /assets/              @ui-owner
-#
-# # AI 算法
-# /ai_search.py         @ai-owner
-# /test/test_search.py  @ai-owner
-#
-# # 评估策略
-# /ai_eval.py           @eval-owner
-# /test/test_eval.py    @eval-owner
-#
-# # 文档与报告
-# /docs/                @eval-owner @wyhsy
-# /README.md            @wyhsy @eval-owner
-# /CONTRIBUTING.md      @wyhsy
-# /.github/             @wyhsy
+# ---- ② 游戏规则（地基模块，改动影响面最大）----
+/board.py               @xiong681
+/rule.py                @xiong681
+/test/test_rule.py      @xiong681
+
+# ---- ① 界面设计 ----
+/ui.py                  @guoyi1005
+/assets/                @guoyi1005
+
+# ---- ③ AI 算法 ----
+/ai_search.py           @wyhsy
+/test/test_search.py    @wyhsy
+/main.py                @wyhsy
+
+# ---- ④ 评估策略 ----
+/ai_eval.py             @qiqiyuexi
+/test/test_eval.py      @qiqiyuexi
+
+# ---- 文档与报告 ----
+/docs/                  @qiqiyuexi @wyhsy
+/README.md              @wyhsy @qiqiyuexi
+/CONTRIBUTING.md        @wyhsy
+
+# ---- 工程配置（组长统一维护）----
+/.github/               @wyhsy
+/.gitignore             @wyhsy
+/.gitattributes         @wyhsy
+/pytest.ini             @wyhsy
+/requirements.txt       @wyhsy
+/requirements-dev.txt   @wyhsy
+/test/test_smoke.py     @wyhsy
