@@ -1,0 +1,26 @@
+# 统一换行符：避免 Windows / macOS 混合开发产生大量“假冲突”
+# 仓库内统一为 LF，检出到工作区时由 git 自动处理
+* text=auto eol=lf
+
+# 明确声明二进制文件，禁止任何换行符转换（否则图片会被写坏）
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.bmp  binary
+*.ttf  binary
+*.otf  binary
+*.wav  binary
+*.mp3  binary
+*.xlsx binary
+*.docx binary
+*.pptx binary
+
+# 文本文件显式声明，方便 GitHub 按语言统计与 diff
+*.py  text
+*.md  text
+*.txt text
+*.yml text
+*.yaml text
+*.json text

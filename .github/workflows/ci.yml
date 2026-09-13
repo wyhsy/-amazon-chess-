@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev, "feature/**"]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  test:
+    name: pytest (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # 组员系统不一致，所以 Windows + Linux 都跑；
+        # 若感觉 Actions 排队太久，可只保留 ubuntu-latest / 3.11 一组
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.9", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: 运行单元测试
+        # dummy 驱动让 pygame 能在无显示器的 CI 里被导入
+        # 注：test/test_smoke.py 保证仓库刚建立、还没有业务用例时 CI 也是绿的；
+        #     M1 完成后可删除该文件，此步骤行为不变。
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: pytest -q
+
+      - name: 代码风格检查（不阻塞合并）
+        continue-on-error: true
+        run: |
+          pip install ruff
+          ruff check .
