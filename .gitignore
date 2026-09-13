@@ -1,0 +1,49 @@
+# ===== Python 编译产物 =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# ===== 虚拟环境 =====
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# ===== 打包 / 构建 =====
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ===== 测试与静态检查缓存 =====
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# ===== 编辑器 / IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== 操作系统 =====
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ===== 本地临时产物（不要提交）=====
+logs/
+*.log
+profile_*.txt
+
+# 说明：正式素材（棋子/棋盘图片、音效）请放到 assets/ 并明确提交；
+# 本地调试截图请勿直接 git add，避免仓库体积膨胀。
