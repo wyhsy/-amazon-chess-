@@ -8,6 +8,7 @@ board.py - 亚马逊棋棋盘数据模型（接口契约 v1.0）
 
 依赖方向：仅标准库，禁止 import 其他项目模块。
 """
+from __future__ import annotations
 
 # ===== 棋盘状态常量（禁止裸写 0/1/2/3）=====
 BOARD_SIZE = 10

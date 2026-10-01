@@ -8,6 +8,7 @@ rule.py - 亚马逊棋规则引擎（接口契约 v1.0）
 
 依赖方向：仅 import board，禁止 import pygame / ui / ai_*。
 """
+from __future__ import annotations
 from collections import namedtuple
 
 from board import (
