@@ -97,11 +97,13 @@ def legal_moves(board: Board, color: int) -> list[Move]:
                 dst_i = idx(dst[0], dst[1])
                 board[src_i] = EMPTY
                 board[dst_i] = color
-                for arrow in shot_targets(board, dst[0], dst[1]):
-                    moves.append(Move(src=(r, c), dst=dst, arrow=arrow))
-                # 恢复临时状态
-                board[src_i] = color
-                board[dst_i] = EMPTY
+                try:
+                    for arrow in shot_targets(board, dst[0], dst[1]):
+                        moves.append(Move(src=(r, c), dst=dst, arrow=arrow))
+                finally:
+                    # 无论是否异常都恢复棋盘
+                    board[src_i] = color
+                    board[dst_i] = EMPTY
     return moves
 
 
@@ -133,9 +135,11 @@ def is_legal(board: Board, move: Move, color: int) -> bool:
     old_src, old_dst = board[src_i], board[dst_i]
     board[src_i] = EMPTY
     board[dst_i] = color
-    valid = _path_clear(board, dst_r, dst_c, arr_r, arr_c)
-    board[src_i] = old_src
-    board[dst_i] = old_dst
+    try:
+        valid = _path_clear(board, dst_r, dst_c, arr_r, arr_c)
+    finally:
+        board[src_i] = old_src
+        board[dst_i] = old_dst
     return valid
 
 
