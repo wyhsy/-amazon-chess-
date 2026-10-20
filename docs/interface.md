@@ -79,7 +79,13 @@ def apply_move(board: Board, move: Move, color: int) -> Board:
     """返回走完后的新棋盘，不修改入参 board。"""
 
 def do_move(board: Board, move: Move, color: int) -> tuple:
-    """就地执行走法，返回被覆盖格子的旧值（供 AI 回溯），仅 AI 搜索内部使用。"""
+    """就地执行走法，返回三元组 (原起点值, 原落点值, 原箭位值)，供 undo_move 复原。"""
+
+def undo_move(...)   # 保持不变，但补一句：
+    """与 do_move 配对，把棋盘完全恢复；old 即 do_move 返回的三元组。"""
+
+def piece_targets(board: Board, r: int, c: int) -> list[tuple[int, int]]:
+    """单个棋子的可移动目标格（皇后 8 方向直线），不包含射箭。**r,c 上不是棋子时返回空列表。**"""
 
 def undo_move(board: Board, move: Move, color: int, old: tuple) -> None:
     """与 do_move 配对，恢复棋盘。"""
