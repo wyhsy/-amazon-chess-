@@ -64,7 +64,8 @@ BLACK_WIN = -1
 DRAW = 0
 
 def piece_targets(board: Board, r: int, c: int) -> list[tuple[int, int]]:
-    """单个棋子的可移动目标格（皇后 8 方向直线），不包含射箭。"""
+    """单个棋子的可移动目标格（皇后 8 方向直线），不包含射箭。
+    注意：r,c 上不是棋子时返回空列表。"""
 
 def shot_targets(board: Board, r: int, c: int) -> list[tuple[int, int]]:
     """从 (r, c) 射箭的可选落点（规则与移动完全相同：皇后 8 方向直线）。"""
