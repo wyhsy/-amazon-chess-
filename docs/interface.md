@@ -3,12 +3,12 @@
 > **这是全队最重要的文档。** `ui.py`、`ai_search.py`、`ai_eval.py` 都建立在 `board.py` / `rule.py` 的公开接口之上。
 > 任何人改动本文件描述的接口，都必须走第 6 节的变更流程。
 >
-> 状态：**已冻结 v1.0（2026-09-13，组长定稿）**——第 1 节的 5 个决策点已全部采纳并冻结，作为全队编码的唯一契约。
+> 状态：**已冻结 v1.1（2026-10-25，组长定稿）**——第 1 节的 5 个决策点沿用 v1.0；v1.1 只修正 `ai_eval` 的依赖方向、补全 `do_move` 返回值说明，并清理第 3 节的重复条目，作为全队编码的唯一契约。
 > 如需调整接口，走第 8 节的变更流程（由组长评估后统一同步给队友）。
 
 ---
 
-## 1. 已冻结的决策点（v1.0）
+## 1. 已冻结的决策点（v1.1）
 
 | # | 决策点 | 结论（v1.0 冻结） | 理由 |
 | --- | --- | --- | --- |
@@ -82,14 +82,11 @@ def apply_move(board: Board, move: Move, color: int) -> Board:
 def do_move(board: Board, move: Move, color: int) -> tuple:
     """就地执行走法，返回三元组 (原起点值, 原落点值, 原箭位值)，供 undo_move 复原。"""
 
-def undo_move(...)   # 保持不变，但补一句：
-    """与 do_move 配对，把棋盘完全恢复；old 即 do_move 返回的三元组。"""
-
 def piece_targets(board: Board, r: int, c: int) -> list[tuple[int, int]]:
     """单个棋子的可移动目标格（皇后 8 方向直线），不包含射箭。**r,c 上不是棋子时返回空列表。**"""
 
 def undo_move(board: Board, move: Move, color: int, old: tuple) -> None:
-    """与 do_move 配对，恢复棋盘。"""
+    """与 do_move 配对，恢复棋盘；old 即 do_move 返回的三元组。"""
 
 def has_any_move(board: Board, color: int) -> bool:
     """该方是否还有棋可走（用于终局判定，应比 legal_moves 早退更高效）。"""
@@ -128,6 +125,9 @@ class Evaluator:
 - 建议特征集（可增减，但改动需与 AI 组同步）：机动性（双方可走格数之差）、领地差、棋子中心/边角权值、连通性与空间分割。
 - 评估函数必须是纯函数，**不允许修改传入的 board**，也不允许 import pygame。
 
+> **v1.1 变更**：允许 `ai_eval.py` import `rule`，直接复用 `piece_targets()` / `territory()` 等纯规则特征。
+> 依赖方向仍是 DAG（`ai_eval → rule → board`），不会形成循环；这样避免在估值里重复实现规则逻辑，也避免两处实现漂移。
+
 ## 5. 搜索（`ai_search.py`）与界面（`ui.py`）
 
 ```python
@@ -159,7 +159,7 @@ def main() -> None:
        /   |    \
     ui.py  |     ai_search.py
       \    |      /      \
-       rule.py  ai_eval.py
+       rule.py ← ai_eval.py
            \      /
           board.py          ← 谁都不允许依赖 ui
 ```
@@ -168,7 +168,7 @@ def main() -> None:
 | --- | --- | --- |
 | `board.py` | 仅标准库 | 其它所有项目模块 |
 | `rule.py` | `board` | `ui`、`ai_*` |
-| `ai_eval.py` | `board` | `ui`、`rule`（可通过参数传入特征，不反向取） |
+| `ai_eval.py` | `board`、`rule` | `ui`、`ai_search`（禁止反向依赖） |
 | `ai_search.py` | `board`、`rule`、`ai_eval` | `ui` |
 | `ui.py` | `board`、`rule`、`ai_search` | `ai_eval`（估值细节属于 AI 组） |
 | `main.py` | 全部 | — |
@@ -198,3 +198,4 @@ def main() -> None:
 | --- | --- | --- | --- |
 | v0.1 | 2026-09-13 | 初稿：确定模块边界与签名草案 | @wyhsy |
 | **v1.0** | **2026-09-13** | **冻结 D1~D5：棋盘一维数组、`(row, col)` 坐标、`Move` namedtuple、双粒度走法生成、不可变 + 回溯两套 API；作为全队编码契约** | **@wyhsy** |
+| **v1.1** | **2026-10-25** | **允许 `ai_eval.py` → `rule`（依赖仍是 DAG）；补全 `do_move` 三元组返回值说明；清理第 3 节重复条目** | **@wyhsy** |

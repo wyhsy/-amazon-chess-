@@ -103,9 +103,9 @@ pytest -q
 ## 开发进度
 
 - [x] 仓库创建、协作规范（README / CONTRIBUTING / CI / 分支保护）
-- [x] 接口契约冻结（`docs/interface.md` v1.0，2026-09-13）
-- [ ] **M1 规则地基**：`board.py` + `rule.py` + 单元测试全绿
-- [ ] **M2 可玩**：`ui.py` 人人对战可下完完整一局
+- [x] 接口契约冻结（`docs/interface.md` v1.0，2026-09-13；v1.1 增补 2026-10-25）
+- [x] **M1 规则地基**：`board.py` + `rule.py` + 单元测试全绿（2026-10-25：25 passed）
+- [ ] **M2 可玩**：`ui.py` 人人对战可下完完整一局（进行中，任务卡见 `docs/tasks/M2-任务派发.md`）
 - [ ] **M3 AI 接入**：Minimax + Alpha-Beta 人机对战
 - [ ] **M4 打磨**：估值调优、难度分级、性能优化、报告与答辩材料
 
